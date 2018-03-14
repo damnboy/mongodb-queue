@@ -41,7 +41,7 @@ function Queue(mongoDbClient, name, opts) {
 
     this.name = name
     this.col = mongoDbClient.collection(name)
-    this.visibility = opts.visibility || 30
+    //this.visibility = opts.visibility || 30
     this.delay = opts.delay || 0
 
     if ( opts.deadQueue ) {
@@ -53,7 +53,7 @@ function Queue(mongoDbClient, name, opts) {
 Queue.prototype.createIndexes = function(callback) {
     var self = this
 
-    self.col.createIndex({ deleted : 1, visible : 1 }, function(err, indexname) {
+    self.col.createIndex({ deleted : 1/*, visible : 1 */}, function(err, indexname) {
         if (err) return callback(err)
         self.col.createIndex({ ack : 1 }, { unique : true, sparse : true }, function(err) {
             if (err) return callback(err)
@@ -69,7 +69,7 @@ Queue.prototype.add = function(payload, opts, callback) {
         opts = {}
     }
     var delay = opts.delay || self.delay
-    var visible = delay ? nowPlusSecs(delay) : now()
+    //var visible = delay ? nowPlusSecs(delay) : now()
 
     var msgs = []
     if (payload instanceof Array) {
@@ -79,13 +79,13 @@ Queue.prototype.add = function(payload, opts, callback) {
         }
         payload.forEach(function(payload) {
             msgs.push({
-                visible  : visible,
+                //visible  : visible,
                 payload  : payload,
             })
         })
     } else {
         msgs.push({
-            visible  : visible,
+            //visible  : visible,
             payload  : payload,
         })
     }
@@ -104,10 +104,10 @@ Queue.prototype.get = function(opts, callback) {
         opts = {}
     }
 
-    var visibility = opts.visibility || self.visibility
+    //var visibility = opts.visibility || self.visibility
     var query = {
         deleted : null,
-        visible : { $lte : now() },
+        //visible : { $lte : now() },
     }
     var sort = {
         _id : 1
@@ -116,7 +116,7 @@ Queue.prototype.get = function(opts, callback) {
         $inc : { tries : 1 },
         $set : {
             ack     : id(),
-            visible : nowPlusSecs(visibility),
+            //visible : nowPlusSecs(visibility),
         }
     }
 
@@ -163,17 +163,17 @@ Queue.prototype.ping = function(ack, opts, callback) {
         opts = {}
     }
 
-    var visibility = opts.visibility || self.visibility
+    //var visibility = opts.visibility || self.visibility
     var query = {
         ack     : ack,
-        visible : { $gt : now() },
+        //visible : { $gt : now() },
         deleted : null,
     }
-    var update = {
+    var update = {}/*{
         $set : {
             visible : nowPlusSecs(visibility)
         }
-    }
+    }*/
     self.col.findOneAndUpdate(query, update, { returnOriginal : false }, function(err, msg, blah) {
         if (err) return callback(err)
         if ( !msg.value ) {
@@ -188,7 +188,7 @@ Queue.prototype.ack = function(ack, callback) {
 
     var query = {
         ack     : ack,
-        visible : { $gt : now() },
+        //visible : { $gt : now() },
         deleted : null,
     }
     var update = {
@@ -229,7 +229,7 @@ Queue.prototype.size = function(callback) {
 
     var query = {
         deleted : null,
-        visible : { $lte : now() },
+        //visible : { $lte : now() },
     }
 
     self.col.count(query, function(err, count) {
@@ -243,7 +243,7 @@ Queue.prototype.inFlight = function(callback) {
 
     var query = {
         ack     : { $exists : true },
-        visible : { $gt : now() },
+        //visible : { $gt : now() },
         deleted : null,
     }
 
