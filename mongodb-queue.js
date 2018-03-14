@@ -11,6 +11,8 @@
  **/
 
 var crypto = require('crypto')
+var bluebird = require('bluebird');
+
 
 // some helper functions
 function id() {
@@ -38,7 +40,6 @@ function Queue(mongoDbClient, name, opts) {
         throw new Error("mongodb-queue: provide a queue name")
     }
     opts = opts || {}
-
     this.name = name
     this.col = mongoDbClient.collection(name)
     //this.visibility = opts.visibility || 30
@@ -92,10 +93,14 @@ Queue.prototype.add = function(payload, opts, callback) {
 
     self.col.insertMany(msgs, function(err, results) {
         if (err) return callback(err)
-        if (payload instanceof Array) return callback(null, '' + results.insertedIds)
+        if (payload instanceof Array) return callback(null, results.ops.map(function(id){
+            return '' + id._id
+        }))
         callback(null, '' + results.ops[0]._id)
     })
 }
+
+
 
 Queue.prototype.get = function(opts, callback) {
     var self = this
